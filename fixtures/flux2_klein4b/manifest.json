@@ -1,0 +1,14 @@
+{
+  "name": "flux2-klein-4b-prompt-embeds",
+  "entries": [
+    {
+      "id": "prompt_embeds",
+      "file": "prompt_embeds.safetensors",
+      "tensor": "prompt_embeds",
+      "shape": [1, 512, 7680],
+      "dtype": "float32",
+      "atol": 0.05,
+      "rtol": 0.001
+    }
+  ]
+}
