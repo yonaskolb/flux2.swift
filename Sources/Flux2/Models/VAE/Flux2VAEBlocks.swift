@@ -1,6 +1,5 @@
 import Foundation
 import MLX
-import MLXFast
 import MLXNN
 
 final class Flux2VAESelfAttention: Module {

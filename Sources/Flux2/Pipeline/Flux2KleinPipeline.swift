@@ -12,7 +12,7 @@ public struct Flux2KleinPipelineOutput {
   public let imageLatentIds: MLXArray?
 }
 
-public enum Flux2KleinPipelineError: Error {
+public enum Flux2KleinPipelineError: Error, LocalizedError {
   case promptEncoderReleased
   case missingTokenizer
   case missingNegativeTokens
@@ -22,6 +22,29 @@ public enum Flux2KleinPipelineError: Error {
   case invalidLatentChannels(Int, Int)
   case invalidNumInferenceSteps(Int)
   case invalidImageCount(Int)
+
+  public var errorDescription: String? {
+    switch self {
+    case .promptEncoderReleased:
+      return "Prompt encoder has been released and is no longer available."
+    case .missingTokenizer:
+      return "Tokenizer is required but was not loaded."
+    case .missingNegativeTokens:
+      return "Negative tokens are required for classifier-free guidance but were not provided."
+    case .invalidNegativeTokens:
+      return "Both negative input IDs and attention mask must be provided together."
+    case .negativeInputIdsShapeMismatch(let expected, let got):
+      return "Negative input IDs shape \(got) must match positive input IDs shape \(expected)."
+    case .negativeAttentionMaskShapeMismatch(let expected, let got):
+      return "Negative attention mask shape \(got) must match positive attention mask shape \(expected)."
+    case .invalidLatentChannels(let inChannels, let patchArea):
+      return "Latent channels (\(inChannels)) must be divisible by patch area (\(patchArea))."
+    case .invalidNumInferenceSteps(let steps):
+      return "Number of inference steps must be positive, got \(steps)."
+    case .invalidImageCount(let count):
+      return "Image list must not be empty, got \(count) images."
+    }
+  }
 }
 
 public final class Flux2KleinPipeline {

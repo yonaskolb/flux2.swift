@@ -196,32 +196,36 @@ extension CLI {
     }
 
     let dtype = resolvedDType
+    let clock = ContinuousClock()
+
+    guard let prompt = options.prompt else {
+      throw CLIError.missingArgument("--prompt")
+    }
+
+    var height = options.height
+    var width = options.width
+    let imageSpecs = options.imageSpecs
+    let conditioning: [ConditioningImage]
+    if imageSpecs.isEmpty {
+      conditioning = []
+    } else {
+      let loadStart = clock.now
+      var loaded: [ConditioningImage] = []
+      for spec in imageSpecs {
+        try await loaded.append(loadConditioningImage(spec: spec))
+      }
+      conditioning = loaded
+      stageTimes["conditioning_load_s"] = seconds(clock.now - loadStart)
+      height = height ?? conditioning.first?.height
+      width = width ?? conditioning.first?.width
+    }
+    let conditioningImages = conditioning.isEmpty ? nil : conditioning.map(\.array)
+
+    let steps = options.steps ?? 50
+    let guidanceScale = options.guidanceScale
+    let imageIdScale = options.imageIdScale
 
     try Device.withDefaultDevice(.gpu) {
-      let clock = ContinuousClock()
-
-      guard let prompt = options.prompt else {
-        throw CLIError.missingArgument("--prompt")
-      }
-
-      var height = options.height
-      var width = options.width
-      let steps = options.steps ?? 50
-      let guidanceScale = options.guidanceScale
-      let imageIdScale = options.imageIdScale
-      let imageSpecs = options.imageSpecs
-      let conditioning: [ConditioningImage]
-      if imageSpecs.isEmpty {
-        conditioning = []
-      } else {
-        let loadStart = clock.now
-        conditioning = try imageSpecs.map { try loadConditioningImage(spec: $0) }
-        stageTimes["conditioning_load_s"] = seconds(clock.now - loadStart)
-        height = height ?? conditioning.first?.height
-        width = width ?? conditioning.first?.width
-      }
-      let conditioningImages = conditioning.isEmpty ? nil : conditioning.map(\.array)
-
       let initStart = clock.now
       let pipeline = try Flux2KleinPipeline(
         snapshot: snapshotURL,
@@ -271,34 +275,38 @@ extension CLI {
     }
 
     let dtype = resolvedDType
+    let clock = ContinuousClock()
+
+    guard let prompt = options.prompt else {
+      throw CLIError.missingArgument("--prompt")
+    }
+
+    var height = options.height
+    var width = options.width
+    let imageSpecs = options.imageSpecs
+    let conditioning: [ConditioningImage]
+    if imageSpecs.isEmpty {
+      conditioning = []
+    } else {
+      let loadStart = clock.now
+      var loaded: [ConditioningImage] = []
+      for spec in imageSpecs {
+        try await loaded.append(loadConditioningImage(spec: spec))
+      }
+      conditioning = loaded
+      stageTimes["conditioning_load_s"] = seconds(clock.now - loadStart)
+      height = height ?? conditioning.first?.height
+      width = width ?? conditioning.first?.width
+    }
+    let conditioningImages = conditioning.isEmpty ? nil : conditioning.map(\.array)
+    let upsampleImages = conditioning.isEmpty ? nil : conditioning.map(\.original)
+
+    let steps = options.steps ?? 50
+    let guidanceScale = options.guidanceScale
+    let imageIdScale = options.imageIdScale
+    let maxLength = options.maxLength
 
     try Device.withDefaultDevice(.gpu) {
-      let clock = ContinuousClock()
-
-      guard let prompt = options.prompt else {
-        throw CLIError.missingArgument("--prompt")
-      }
-
-      var height = options.height
-      var width = options.width
-      let steps = options.steps ?? 50
-      let guidanceScale = options.guidanceScale
-      let imageIdScale = options.imageIdScale
-      let maxLength = options.maxLength
-      let imageSpecs = options.imageSpecs
-      let conditioning: [ConditioningImage]
-      if imageSpecs.isEmpty {
-        conditioning = []
-      } else {
-        let loadStart = clock.now
-        conditioning = try imageSpecs.map { try loadConditioningImage(spec: $0) }
-        stageTimes["conditioning_load_s"] = seconds(clock.now - loadStart)
-        height = height ?? conditioning.first?.height
-        width = width ?? conditioning.first?.width
-      }
-      let conditioningImages = conditioning.isEmpty ? nil : conditioning.map(\.array)
-      let upsampleImages = conditioning.isEmpty ? nil : conditioning.map(\.original)
-
       let initStart = clock.now
       let pipeline = try Flux2DevPipeline(
         snapshot: snapshotURL,
