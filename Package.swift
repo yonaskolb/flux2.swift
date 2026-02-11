@@ -8,6 +8,7 @@ let package = Package(
   ],
   products: [
     .library(name: "Flux2", targets: ["Flux2"]),
+    .library(name: "Flux2CLICore", targets: ["Flux2CLICore"]),
     .executable(name: "flux2-cli", targets: ["Flux2CLI"])
   ],
   dependencies: [
@@ -29,16 +30,25 @@ let package = Package(
         .product(name: "Transformers", package: "swift-transformers")
       ]
     ),
+    .target(
+      name: "Flux2CLICore",
+      dependencies: []
+    ),
     .executableTarget(
       name: "Flux2CLI",
       dependencies: [
         "Flux2",
+        "Flux2CLICore",
         .product(name: "ArgumentParser", package: "swift-argument-parser")
       ]
     ),
     .testTarget(
       name: "Flux2Tests",
       dependencies: ["Flux2"]
+    ),
+    .testTarget(
+      name: "Flux2CLITests",
+      dependencies: ["Flux2CLICore"]
     )
   ]
 )

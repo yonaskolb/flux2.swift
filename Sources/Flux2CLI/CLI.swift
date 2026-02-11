@@ -1,20 +1,8 @@
 import ArgumentParser
 import Foundation
 import Flux2
-
-enum CLIError: Error, LocalizedError {
-  case missingArgument(String)
-  case invalidOption(String)
-
-  var errorDescription: String? {
-    switch self {
-    case .missingArgument(let argument):
-      return "Missing argument: \(argument)"
-    case .invalidOption(let message):
-      return message
-    }
-  }
-}
+import Flux2CLICore
+typealias CLIError = Flux2CLICore.CLIError
 
 @main
 struct CLI: AsyncParsableCommand {
