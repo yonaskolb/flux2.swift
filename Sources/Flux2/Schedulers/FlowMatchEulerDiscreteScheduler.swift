@@ -1,17 +1,31 @@
 import Foundation
 import MLX
-import MLXRandom
 
 public struct FlowMatchEulerDiscreteSchedulerOutput {
   public let prevSample: MLXArray
 }
 
-public enum FlowMatchEulerDiscreteSchedulerError: Error {
+public enum FlowMatchEulerDiscreteSchedulerError: Error, LocalizedError {
   case configNotFound(URL)
   case invalidTimeShiftType(String)
   case betaSigmasUnsupported
   case missingDynamicShiftMu
   case invalidSchedule(String)
+
+  public var errorDescription: String? {
+    switch self {
+    case .configNotFound(let url):
+      return "Scheduler configuration not found at \(url.path)."
+    case .invalidTimeShiftType(let type):
+      return "Invalid time shift type '\(type)'; expected 'exponential' or 'linear'."
+    case .betaSigmasUnsupported:
+      return "Beta sigmas are not supported."
+    case .missingDynamicShiftMu:
+      return "Dynamic shifting requires a mu value."
+    case .invalidSchedule(let reason):
+      return "Invalid schedule: \(reason)."
+    }
+  }
 }
 
 public final class FlowMatchEulerDiscreteScheduler {

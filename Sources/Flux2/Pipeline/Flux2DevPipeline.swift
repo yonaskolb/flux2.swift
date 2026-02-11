@@ -12,12 +12,27 @@ public struct Flux2DevPipelineOutput {
   public let imageLatentIds: MLXArray?
 }
 
-public enum Flux2DevPipelineError: Error {
+public enum Flux2DevPipelineError: Error, LocalizedError {
   case promptEncoderReleased
   case missingProcessor
   case invalidLatentChannels(Int, Int)
   case invalidNumInferenceSteps(Int)
   case invalidImageCount(Int)
+
+  public var errorDescription: String? {
+    switch self {
+    case .promptEncoderReleased:
+      return "Prompt encoder has been released and is no longer available."
+    case .missingProcessor:
+      return "Processor is required but was not loaded."
+    case .invalidLatentChannels(let inChannels, let patchArea):
+      return "Latent channels (\(inChannels)) must be divisible by patch area (\(patchArea))."
+    case .invalidNumInferenceSteps(let steps):
+      return "Number of inference steps must be positive, got \(steps)."
+    case .invalidImageCount(let count):
+      return "Image list must not be empty, got \(count) images."
+    }
+  }
 }
 
 public final class Flux2DevPipeline {

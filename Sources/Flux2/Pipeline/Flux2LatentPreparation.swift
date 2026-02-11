@@ -1,6 +1,5 @@
 import Foundation
 import MLX
-import MLXRandom
 
 public struct Flux2PreparedLatents {
   public let latents: MLXArray
@@ -14,10 +13,21 @@ public struct Flux2PreparedImageLatents {
   public let ids: MLXArray
 }
 
-public enum Flux2LatentPreparationError: Error {
+public enum Flux2LatentPreparationError: Error, LocalizedError {
   case failedToCreateLatents
   case emptyImages
   case invalidImageShape(index: Int, shape: [Int])
+
+  public var errorDescription: String? {
+    switch self {
+    case .failedToCreateLatents:
+      return "Failed to create latent tensor."
+    case .emptyImages:
+      return "Image list must not be empty."
+    case .invalidImageShape(let index, let shape):
+      return "Image at index \(index) has invalid shape \(shape); expected 4 dimensions."
+    }
+  }
 }
 
 public enum Flux2LatentPreparation {

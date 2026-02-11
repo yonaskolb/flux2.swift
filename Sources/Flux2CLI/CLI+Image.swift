@@ -21,7 +21,7 @@ extension CLI {
     _ spec: String,
     remoteTimeout: TimeInterval = 60,
     remoteMaximumBytes: Int = 50 * 1024 * 1024
-  ) throws -> Data {
+  ) async throws -> Data {
     let trimmed = spec.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else {
       throw CLIError.invalidOption("Empty image path")
@@ -32,7 +32,7 @@ extension CLI {
       guard let url = URL(string: trimmed) else {
         throw CLIError.invalidOption("Invalid image URL: \(trimmed)")
       }
-      return try fetchRemoteData(url: url, timeout: remoteTimeout, maxBytes: remoteMaximumBytes)
+      return try await fetchRemoteData(url: url, timeout: remoteTimeout, maxBytes: remoteMaximumBytes)
     }
     if lower.hasPrefix("file://") {
       guard let url = URL(string: trimmed) else {
@@ -48,7 +48,7 @@ extension CLI {
     return try Data(contentsOf: url)
   }
 
-  private static func fetchRemoteData(url: URL, timeout: TimeInterval, maxBytes: Int) throws -> Data {
+  private static func fetchRemoteData(url: URL, timeout: TimeInterval, maxBytes: Int) async throws -> Data {
     let config = URLSessionConfiguration.ephemeral
     config.timeoutIntervalForRequest = timeout
     config.timeoutIntervalForResource = timeout
@@ -58,72 +58,38 @@ extension CLI {
     var request = URLRequest(url: url)
     request.timeoutInterval = timeout
 
-    let semaphore = DispatchSemaphore(value: 0)
-    var result: Result<Data, Error>?
+    let (data, response) = try await session.data(for: request)
 
-    let task = session.dataTask(with: request) { data, response, error in
-      defer { semaphore.signal() }
-
-      if let error {
-        result = .failure(CLIError.invalidOption("Failed to download image: \(url.absoluteString) (\(error.localizedDescription))"))
-        return
-      }
-
-      guard let http = response as? HTTPURLResponse else {
-        result = .failure(CLIError.invalidOption("Invalid response while downloading image: \(url.absoluteString)"))
-        return
-      }
-
-      guard (200..<300).contains(http.statusCode) else {
-        result = .failure(CLIError.invalidOption("Failed to download image: \(url.absoluteString) (HTTP \(http.statusCode))"))
-        return
-      }
-
-      if http.expectedContentLength > 0, http.expectedContentLength > Int64(maxBytes) {
-        result = .failure(
-          CLIError.invalidOption(
-            "Remote image too large: \(url.absoluteString) (expected \(http.expectedContentLength) bytes > max \(maxBytes))"
-          )
-        )
-        return
-      }
-
-      let resolved = data ?? Data()
-      if resolved.count > maxBytes {
-        result = .failure(
-          CLIError.invalidOption(
-            "Remote image too large: \(url.absoluteString) (downloaded \(resolved.count) bytes > max \(maxBytes))"
-          )
-        )
-        return
-      }
-
-      result = .success(resolved)
-    }
-
-    task.resume()
-    if semaphore.wait(timeout: .now() + timeout + 5) == .timedOut {
-      task.cancel()
-      throw CLIError.invalidOption("Timed out downloading image: \(url.absoluteString)")
-    }
-
-    switch result {
-    case .success(let data):
-      return data
-    case .failure(let error):
-      throw error
-    case .none:
+    guard let http = response as? HTTPURLResponse else {
       throw CLIError.invalidOption("Invalid response while downloading image: \(url.absoluteString)")
     }
+
+    guard (200..<300).contains(http.statusCode) else {
+      throw CLIError.invalidOption("Failed to download image: \(url.absoluteString) (HTTP \(http.statusCode))")
+    }
+
+    if http.expectedContentLength > 0, http.expectedContentLength > Int64(maxBytes) {
+      throw CLIError.invalidOption(
+        "Remote image too large: \(url.absoluteString) (expected \(http.expectedContentLength) bytes > max \(maxBytes))"
+      )
+    }
+
+    if data.count > maxBytes {
+      throw CLIError.invalidOption(
+        "Remote image too large: \(url.absoluteString) (downloaded \(data.count) bytes > max \(maxBytes))"
+      )
+    }
+
+    return data
   }
 
-  static func loadImage(spec: String, height: Int, width: Int) throws -> MLXArray {
+  static func loadImage(spec: String, height: Int, width: Int) async throws -> MLXArray {
     guard height > 0, width > 0 else {
       throw CLIError.invalidOption("Invalid image size \(width)x\(height)")
     }
 
     let trimmed = spec.trimmingCharacters(in: .whitespacesAndNewlines)
-    let data = try loadDataFromSpec(trimmed)
+    let data = try await loadDataFromSpec(trimmed)
     let cgImage = try decodeCGImage(data: data, spec: trimmed)
     let rgba = try renderRGBA(image: cgImage, width: width, height: height, resizeMode: .crop)
 
@@ -151,7 +117,7 @@ extension CLI {
     spec: String,
     maxArea: Int = 1024 * 1024,
     multipleOf: Int = 16
-  ) throws -> ConditioningImage {
+  ) async throws -> ConditioningImage {
     guard maxArea > 0 else {
       throw CLIError.invalidOption("Invalid maxArea: \(maxArea)")
     }
@@ -160,7 +126,7 @@ extension CLI {
     }
 
     let trimmed = spec.trimmingCharacters(in: .whitespacesAndNewlines)
-    let data = try loadDataFromSpec(trimmed)
+    let data = try await loadDataFromSpec(trimmed)
     var cgImage = try decodeCGImage(data: data, spec: trimmed)
     let originalImage = cgImage
 
