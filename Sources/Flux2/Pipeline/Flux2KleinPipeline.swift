@@ -418,6 +418,7 @@ public final class Flux2KleinPipeline {
         sample: current
       ).prevSample
       current = prev
+      MLX.eval(current)
     }
 
     return current

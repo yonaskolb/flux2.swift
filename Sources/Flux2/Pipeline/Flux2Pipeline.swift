@@ -63,6 +63,7 @@ public final class Flux2Pipeline {
         modelTimestepScale: modelTimestepScale
       )
       current = output.prevLatents
+      MLX.eval(current)
     }
     return current
   }
